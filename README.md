@@ -1,6 +1,6 @@
 React-Redux-JSSDK
 -----------------
-Работа с JSSDK поверх React, плюс высякие хелперы.
+Работа с JSSDK поверх Redux, плюс высякие хелперы.
 
 ```
 npm i --save react-redux-jssdk
