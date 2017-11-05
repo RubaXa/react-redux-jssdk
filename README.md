@@ -14,12 +14,12 @@ npm i --save react-redux-jssdk
 ---
 
 #### `connect`
-Это не какая-то своя имплементация, это просто надстройка над [оригинальным коонектором](https://github.com/reactjs/react-redux/blob/master/docs/api.md#connectmapstatetoprops-mapdispatchtoprops-mergeprops-options),
+Это не какая-то своя имплементация, это просто надстройка над [оригинальным](https://github.com/reactjs/react-redux/blob/master/docs/api.md#connectmapstatetoprops-mapdispatchtoprops-mergeprops-options),
 он всё так же создаёт имутабильный `HOC`, но с одним отличием, есть у свойства, которое вы достали из `state` есть методы `on` и `off`,
 то он подписывается на события `change` или `add remove sort reset update`, при срабатывании которых вызывается `forceUpdate` (сгруппированый по `requestAnimationFrame`).
 
 Всё это значит, что вы можете спокойно использовать JSSDK модели и списки моделей в `state`,
-а коннектор сам позаботиться о подписки и отписки на получаемые модели через коннектор.
+а коннектор сам позаботится о подписки и отписки на получаемые модели через коннектор.
 
 Простой пример
 
