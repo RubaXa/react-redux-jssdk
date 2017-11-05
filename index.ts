@@ -1,3 +1,5 @@
-import module from './src/Observer/Observer';
+import connect from './src/connect/connect';
 
-export default module;
+export {
+	connect,
+};
