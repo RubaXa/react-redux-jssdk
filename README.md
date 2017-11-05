@@ -3,7 +3,7 @@ React-Redux-JSSDK
 Работа с JSSDK поверх React, плюс высякие хелперы.
 
 ```
-npm i --save react-jssdk
+npm i --save react-redux-jssdk
 ```
 
 ### API
