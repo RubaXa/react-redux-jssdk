@@ -37,7 +37,6 @@ async function frame() {
 	});
 }
 
-
 const defaultFolder = new Emitter('inbox');
 const defaultThreads = new Emitter('3');
 defaultThreads.forEach = () => {};

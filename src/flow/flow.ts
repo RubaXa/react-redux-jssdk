@@ -1,115 +1,74 @@
-import {Dispatch} from 'redux';
+import * as React from 'react';
+import {FlowProps} from '../createFlow/createFlow';
 
-export interface Action {
-	type: string;
-	payload: any;
-}
-
-export interface FlowProps {
-	pending: boolean;
-	success: boolean;
-	failed: boolean;
-	error: Error;
-}
-
-export type FlowEffect<TStateProps, TState> = (action: Action, dispatch: Dispatch<TState>, getState: () => TState) => Promise<Partial<TStateProps>>;
-
-export type FlowScheme<TStateProps, TState> = {
-	name: string;
-	effects: FlowEffect<TStateProps, TState> | {
-		[actionType: string]: FlowEffect<TStateProps, TState>;
-	};
-	reducer: (state: TStateProps, action: Action) => TStateProps;
+export type Props = {
+	source: FlowProps;
+	pending?: React.ReactNode;
+	failed?: React.ReactNode;
+	children?: string | React.ReactNode;
+	pendingDelayBeforeShow?: number;
+	pendingDelayBeforeHide?: number;
 };
 
-export function createFlow<TStateProps, TState = any>(scheme: FlowScheme<TStateProps, TState>) {
-	const {
-		name,
-		reducer,
-		effects,
-	} = scheme;
+export type State = {
+	pending: boolean;
+};
 
-	const ACTIONS = {
-		INIT: `${name}/INIT`,
-		PENDING: `${name}/PENDING`,
-		SUCCESS: `${name}/SUCCESS`,
-		FAILED: `${name}/FAILED`,
+export default class Flow extends React.Component<Props, State> {
+	static defaultProps = {
+		pendingDelayBeforeShow: 100,
+		pendingDelayBeforeHide: 50,
 	};
 
-	const PENDING = {type: ACTIONS.PENDING, payload: name};
+	private pid: number;
 
-	return {
-		ACTIONS,
+	constructor(props, context) {
+		super(props, context);
 
-		middleware: ({dispatch, getState}) => {
-			let cid = 0;
-			let inited = false;
-			let isPureEffects = typeof effects === 'function';
-			let activeEffects: {[name: string]: number} = {};
+		this.state = {
+			pending: props.pending,
+		};
+	}
 
-			function factoryResolver(actionType, resolveAs) {
-				const id = ++cid;
-				const key = `${actionType}${resolveAs}`;
+	componentWillReceiveProps(nextProps) {
+		const {pending} = nextProps.source;
 
-				activeEffects[key] = id;
+		if (this.props.source.pending !== pending) {
+			clearTimeout(this.pid);
+			this.pid = window.setTimeout(() => {
+				this.setState({pending});
+			}, this.props[pending ? 'pendingDelayBeforeShow' : 'pendingDelayBeforeHide']);
+		}
+	}
 
-				return (result) => {
-					if (activeEffects[key] === id) {
-						dispatch({type: ACTIONS[resolveAs], payload: result});
-					}
-				};
+	componentWillUnmount() {
+		clearTimeout(this.pid);
+	}
+
+	render() {
+		const {
+			source,
+			pending,
+			failed,
+			children,
+		} = this.props;
+		let fragment = null;
+
+		if (this.state.pending && pending) {
+			fragment = pending;
+		} else if (source.failed && failed) {
+			fragment = failed;
+		} else if (source.success && children) {
+			fragment = children;
+
+			if (typeof fragment === 'string') {
+				return fragment;
 			}
+		}
 
-			return (next) => (action: Action) => {
-				next(action);
-
-				if (inited) {
-					const type = action.type;
-					let promise = null;
-
-					dispatch(PENDING);
-
-					if (isPureEffects) {
-						promise = (effects as FlowEffect<TStateProps, TState>)(action, dispatch, getState);
-					} else if (effects.hasOwnProperty(type)) {
-						promise = effects[type](action, dispatch, getState);
-					}
-
-					if (promise !== null) {
-						promise
-							.then(factoryResolver(type, 'SUCCESS'))
-							.catch(factoryResolver(type, 'FAILED'))
-						;
-					}
-				} else {
-					inited = true;
-					dispatch({type: ACTIONS.INIT, payload: name});
-				}
-			};
-		},
-
-		reducer: (state: TStateProps & FlowProps, action: Action) => {
-			const {type, payload} = action;
-
-			if (type === ACTIONS.PENDING || type === ACTIONS.SUCCESS || type === ACTIONS.FAILED) {
-				state = {
-					...Object(state),
-					pending: type === ACTIONS.PENDING,
-					success: false,
-					failed: false,
-					error: null,
-				};
-
-				if (type === ACTIONS.SUCCESS) {
-					state.success = true;
-					Object.assign(state, payload);
-				} else if (type === ACTIONS.FAILED){
-					state.failed = true;
-					state.error = payload;
-				}
-			}
-
-			return reducer(state, action);
-		},
-	};
+		return fragment === null
+			? fragment
+			: React.cloneElement(React.Children.only(fragment), source)
+		;
+	}
 }
