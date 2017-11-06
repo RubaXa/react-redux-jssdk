@@ -10,7 +10,7 @@ npm i --save react-redux-jssdk
 
  - [connect](#connect) — коннектор для redux и jssdk
  - [createFlow](#createFlow) — упрощаем работу с асинхронными данымми
- - [<Flow/>](#Flow) — компонент для удобной работы с «потоком»
+ - [&lt;Flow/&gt;](#Flow) — компонент для удобной работы с «потоком»
 
 ---
 
