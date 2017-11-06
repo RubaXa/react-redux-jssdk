@@ -190,6 +190,7 @@ import {Flow} from 'react-jssdk';
 export default ({threads}) =>
 	<Flow
 		source={threads}
+		pending={<Spinner/>}
 		failed={<Error message="Ошибка загрузки списка тредов"/>}
 	>
 		Загружено {threads.list.length} тредов.
