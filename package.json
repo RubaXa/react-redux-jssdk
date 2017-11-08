@@ -1,6 +1,6 @@
 {
   "name": "react-redux-jssdk",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Работа с JSSDK поверх Redux, плюс высякие хелперы",
   "author": "RubaXa <ibnRubaXa@gmail.com>",
   "license": "MIT",
