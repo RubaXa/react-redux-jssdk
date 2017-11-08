@@ -1,18 +1,19 @@
 import {combineReducers, createStore} from 'redux';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import connect from './connect';
+import connect, {setObservableClass} from './connect';
 import {Provider} from 'react-redux';
 import {requestFrame} from '@perf-tools/balancer';
 
 let cid = 1;
 
 class Emitter {
+	__beforeGet__: (model: Emitter) => void;
 	cid: number;
 	forEach: () => void;
 	list = [];
 
-	constructor(public value: string) {
+	constructor(private value: string) {
 		this.cid = cid++;
 	}
 
@@ -24,12 +25,19 @@ class Emitter {
 		this.list.splice(this.list.indexOf(fn), 1);
 	}
 
-	set(value) {
+	set(value, silent?) {
 		this.value = value;
-		this.list.forEach(fn => fn());
+		!silent && this.list.forEach(fn => fn());
 		return this;
 	}
+
+	get() {
+		(this.__beforeGet__ !== null) && this.__beforeGet__(this);
+		return this.value;
+	}
 }
+
+Emitter.prototype.__beforeGet__ = null;
 
 async function frame() {
 	return new Promise(resolve => {
@@ -40,6 +48,8 @@ async function frame() {
 const defaultFolder = new Emitter('inbox');
 const defaultThreads = new Emitter('3');
 defaultThreads.forEach = () => {};
+
+setObservableClass(Emitter);
 
 const store = createStore(combineReducers({
 	active: (state = 0, {type, payload}) => type == 'ACTIVE' ? payload : state,
@@ -70,12 +80,12 @@ describe('connect', () => {
 	const root = document.createElement('div');
 	const Fragment = connect<{
 		active: string;
-		folder: {value: string};
-		threads: {value: string};
+		folder: {get(): string};
+		threads: {get(): string};
 	}>((strore) => strore)(({active, folder, threads}) => [
 		`active: ${active}`,
-		`folder: ${folder.value}`,
-		`threads: ${threads.value}`,
+		`folder: ${folder.get()}`,
+		`threads: ${threads.get()}`,
 	].join('\n') as any);
 
 	ReactDOM.render(
@@ -112,7 +122,7 @@ describe('connect', () => {
 		expect(root.innerHTML.split('\n')[1]).toEqual('folder: trash');
 
 		defaultFolder.set('fail');
-		folder.value = 'archive';
+		folder.set('archive', true);
 
 		await frame();
 		expect(root.innerHTML.split('\n')[1]).toEqual('folder: trash');
@@ -120,6 +130,17 @@ describe('connect', () => {
 		folder.set('archive');
 		await frame();
 		expect(root.innerHTML.split('\n')[1]).toEqual('folder: archive');
+
+		defaultFolder.set('revert');
+		store.dispatch({type: 'FOLDER/SET', payload: defaultFolder});
+		await frame();
+		expect(root.innerHTML.split('\n')[1]).toEqual('folder: revert');
+
+		folder.set('fail');
+		defaultFolder.set('revert-silent', true);
+		store.dispatch({type: 'FOLDER/SET', payload: defaultFolder});
+		await frame();
+		expect(root.innerHTML.split('\n')[1]).toEqual('folder: revert');
 	});
 
 	it('folder#set', async () => {

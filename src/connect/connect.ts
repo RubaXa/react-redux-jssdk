@@ -1,16 +1,19 @@
+import {func} from 'prop-types';
 import {connect as reactReduxConnect, Connect} from 'react-redux';
 import {debounce, F_NO_ARGS} from '@perf-tools/balancer';
 
-interface Wrapper {
-	selector: {props: object};
+const NS = '__react-redux-jssdk__';
 
-	__models__: Set<Observable>;
-	__forceUpdate__: () => void;
+let Class: ObservableClass = null;
 
-	forceUpdate(): void;
-	componentDidMount(): void;
-	componentWillUnmount(): void;
-	componentWillReceiveProps(nextProps: object): void;
+export function setObservableClass(Target) {
+	Class = Target;
+}
+
+interface ObservableClass {
+	prototype: {
+		__beforeGet__: (model: Observable) => void;
+	};
 }
 
 interface Observable {
@@ -27,57 +30,90 @@ function getEventNames(model: Observable) {
 	return typeof model.forEach === 'function' ? 'add remove sort reset update' : 'change';
 }
 
-function updateModels(cmp: Wrapper) {
-	const props = cmp.selector.props;
-	const {
-		__models__ = new Set<Observable>(),
-		__forceUpdate__,
-	} = cmp;
-	const newModels = Object.keys(props).reduce((models, name) => {
-		const model = props[name];
+function proxyCell(cmp) {
+	const models = [];
+	const activeList = {};
+	const handleEvent = debounce(cmp.forceUpdate, cmp, null, {flags: F_NO_ARGS});
+	let __beforeGet__;
+	let rev = 0;
+	let length = 0;
 
-		if (isObservable(model) && !models.has(model)) {
-			!__models__.has(model) && model.on(getEventNames(model), __forceUpdate__);
-			models.add(model);
+
+	function autobind(model) {
+		if (activeList[model.cid] === void 0) {
+			model.on(getEventNames(model), handleEvent);
+			models[length++] = model;
 		}
 
-		return models;
-	}, new Set<Observable>());
+		activeList[model.cid] = rev;
+	}
 
-	__models__.forEach(model => {
-		if (!newModels.has(model)) {
-			model.off(getEventNames(model), __forceUpdate__);
+	return function (render, ctx, props, context) {
+		let newLength = 0;
+
+		rev++;
+		__beforeGet__ = Class.prototype.__beforeGet__;
+		Class.prototype.__beforeGet__ = autobind;
+
+		const frag = render.call(ctx, props, context);
+
+		for (let i = 0; i < length; i++) {
+			const model = models[i];
+			models[newLength] = model;
+
+			if (activeList[model.cid] === rev) {
+				newLength++;
+			} else {
+				model.off(getEventNames(model), handleEvent);
+				activeList[model.cid] = void 0;
+			}
 		}
-	});
 
-	cmp.__models__ = newModels;
+		length = newLength;
+		Class.prototype.__beforeGet__ = __beforeGet__;
+
+		return frag;
+	};
+}
+
+function computed(render) {
+	return function computedRender(props, context) {
+		return context[NS](render, this, props, context);
+	};
 }
 
 export default <Connect>function connect(...args) {
 	return function (Target) {
+		if (typeof Target === 'function') {
+			Target = computed(Target);
+		} else {
+			Target.prototype.render = computed(Target.prototype.render);
+		}
+
 		const HOC = reactReduxConnect(...args)(Target);
 		const proto = HOC.prototype;
-		const {
-			componentDidMount,
-			componentWillUnmount,
-			onStateChange,
-		} = proto;
+		const {getChildContext} = proto;
 
-		proto.componentDidMount = function () {
-			this.__forceUpdate__ = debounce(this.forceUpdate, this, null, {flags: F_NO_ARGS});
-			updateModels(this);
-			componentDidMount && componentDidMount.call(this);
+		HOC.childContextTypes = {
+			...Object(HOC.childContextTypes),
+			[NS]: func,
 		};
 
-		proto.onStateChange = function () {
-			onStateChange && onStateChange.call(this);
-			updateModels(this);
+		Target.contextTypes = {
+			...Object(Target.childContextTypes),
+			[NS]: func,
 		};
 
-		proto.componentWillUnmount = function () {
-			this.__forceUpdate__.cancel();
-			updateModels(this);
-			componentWillUnmount && componentWillUnmount.call(this);
+		proto[NS] = null;
+		proto.getChildContext = function () {
+			const context = getChildContext ? getChildContext.call(this) : {};
+
+			if (this[NS] === null) {
+				this[NS] = proxyCell(this);
+			}
+
+			context[NS] = this[NS];
+			return context;
 		};
 
 		return HOC;
