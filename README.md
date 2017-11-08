@@ -175,14 +175,14 @@ export default createFlow<ThreadsStateProps, {}>({
 
 <a name="Flow"></a>
 #### `<Flow/>`
-Компонент, для удобной работы с потоком
+Компонент, для удобной работы с потоком.
 
  - **source**: `FlowProps` — поток
  - **pending**: `React.ReactNode` — компонент отвечающий за поток в состоянии `pending`
  - **failed**: `React.ReactNode`
  - **children**: `string | React.ReactNode`
- - **pendingDelayBeforeShow?**: `number` — задержка перед показом `pending`
- - **pendingDelayBeforeHide?**: `number`
+ - **pendingDelayBeforeShow?**: `number` — задержка перед показом `pending` (по умолчанию `100ms`)
+ - **pendingDelayBeforeHide?**: `number`  — задержка перед скрытием `pending` (по умолчанию `50ms`)
 
 ```tsx
 import {Flow} from 'react-jssdk';

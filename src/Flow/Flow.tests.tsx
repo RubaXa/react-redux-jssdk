@@ -55,3 +55,20 @@ it('Flow', async () => {
 
 	await pause(20);
 });
+
+
+it('Flow / ChildrenFactory', async () => {
+	let flow: FlowProps = {pending: false, success: true};
+	const root = document.createElement('div');
+	const render = () => {
+		ReactDOM.render(
+			<Flow source={flow}>{() => <b>Done</b>}</Flow>,
+			root,
+		);
+
+		return root.innerHTML;
+	};
+
+	expect(render()).toEqual('<b>Done</b>');
+});
+

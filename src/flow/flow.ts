@@ -1,11 +1,12 @@
 import * as React from 'react';
 import {FlowProps} from '../createFlow/createFlow';
 
+export type ChildrenFactory = () => React.ReactNode;
 export type Props = {
 	source: FlowProps;
 	pending?: React.ReactNode;
 	failed?: React.ReactNode;
-	children?: string | React.ReactNode;
+	children?: string | React.ReactNode | ChildrenFactory;
 	pendingDelayBeforeShow?: number;
 	pendingDelayBeforeHide?: number;
 };
@@ -13,6 +14,27 @@ export type Props = {
 export type State = {
 	pending: boolean;
 };
+
+export class FlowError extends React.Component<FlowProps, null> {
+	render() {
+		const {error} = this.props;
+
+		return React.createElement(
+			'div',
+			{
+				style: {
+					fontFamily: 'Arial',
+					fontSize: 11,
+					fontWeight: 'normal',
+					color: '#fff',
+					padding: '2px 5px',
+					background: 'red',
+				}
+			},
+			error ? error.toString() : 'FlowError',
+		);
+	}
+}
 
 export default class Flow extends React.Component<Props, State> {
 	static defaultProps = {
@@ -49,7 +71,7 @@ export default class Flow extends React.Component<Props, State> {
 		const {
 			source,
 			pending,
-			failed,
+			failed = React.createElement(FlowError, source),
 			children,
 		} = this.props;
 		let fragment = null;
@@ -59,10 +81,9 @@ export default class Flow extends React.Component<Props, State> {
 		} else if (source.failed && failed) {
 			fragment = failed;
 		} else if (source.success && children) {
-			fragment = children;
-
-			if (typeof fragment === 'string') {
-				return fragment;
+			switch (typeof children) {
+				case 'function': return (children as ChildrenFactory)();
+				default: return children;
 			}
 		}
 
