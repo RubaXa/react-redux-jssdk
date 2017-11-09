@@ -1,4 +1,4 @@
-import {Dispatch, Middleware, MiddlewareAPI} from 'redux';
+import {Middleware, MiddlewareAPI} from 'redux';
 
 export interface Action {
 	type: string;
@@ -12,13 +12,13 @@ export interface FlowProps {
 	error?: Error;
 }
 
-export type FlowEffect<StateProps extends FlowProps, State> = (action: Action, dispatch: Dispatch<State>, geState: () => State) => Promise<Partial<StateProps>>;
+export type FlowEffect<StateProps extends FlowProps, S> = (action: Action, store: Store<S>) => Promise<Partial<StateProps>>;
 
-export type FlowScheme<StateProps extends FlowProps, State> = {
+export type FlowScheme<StateProps extends FlowProps, S> = {
 	name: string;
 	defaults: StateProps;
-	effects?: FlowEffect<StateProps, State> | {
-		[actionType: string]: FlowEffect<StateProps, State>;
+	effects?: FlowEffect<StateProps, S> | {
+		[actionType: string]: FlowEffect<StateProps, S>;
 	};
 	reducer?: (state: StateProps, action: Action) => StateProps;
 };
@@ -33,7 +33,6 @@ export function createFlow<StateProps extends FlowProps, State>(scheme: FlowSche
 	} = scheme;
 
 	const ACTIONS = {
-		INIT: `${name}/INIT`,
 		PENDING: `${name}/PENDING`,
 		SUCCESS: `${name}/SUCCESS`,
 		FAILED: `${name}/FAILED`,
@@ -52,7 +51,8 @@ export function createFlow<StateProps extends FlowProps, State>(scheme: FlowSche
 		name,
 		ACTIONS,
 
-		middleware: (({dispatch, getState}: MiddlewareAPI<State>) => {
+		middleware: ((store: MiddlewareAPI<State>) => {
+			const {dispatch} = store;
 			let cid = 0;
 			let isFunction = typeof effects === 'function';
 			let activeEffects: {[name: string]: number} = {};
@@ -76,15 +76,19 @@ export function createFlow<StateProps extends FlowProps, State>(scheme: FlowSche
 				const type = action.type;
 				let promise = null;
 
+				if (ACTIONS.PENDING === type || ACTIONS.SUCCESS === type || ACTIONS.FAILED === type) {
+					return;
+				}
+
 				if (isFunction) {
-					promise = (effects as FlowEffect<StateProps, State>)(action, dispatch, getState);
-					(promise != null) && dispatch(PENDING);
+					promise = (effects as FlowEffect<StateProps, State>)(action, store);
 				} else if (effects.hasOwnProperty(type)) {
-					dispatch(PENDING);
-					promise = effects[type](action, dispatch, getState);
+					promise = effects[type](action, store);
 				}
 
 				if (promise != null) {
+					dispatch(PENDING);
+
 					promise
 						.then(factoryResolver(type, 'SUCCESS'))
 						.catch(factoryResolver(type, 'FAILED'))
