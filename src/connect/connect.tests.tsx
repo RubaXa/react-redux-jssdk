@@ -1,7 +1,7 @@
 import {combineReducers, createStore} from 'redux';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import connect, {setObservableClass} from './connect';
+import {connect, setObservableClass} from './connect';
 import {Provider} from 'react-redux';
 import {requestFrame} from '@perf-tools/balancer';
 
@@ -69,7 +69,7 @@ const store = createStore(combineReducers({
 	},
 }));
 
-describe('connect', () => {
+describe('connect: mapStateToProps', () => {
 	beforeEach(() => {
 		defaultFolder.set('inbox');
 		store.dispatch({type: 'ACTIVE', payload: 0});
@@ -80,11 +80,15 @@ describe('connect', () => {
 	const root = document.createElement('div');
 	const Fragment = connect<{
 		active: string;
-		folder: {get(): string};
+		folder: string;
 		threads: {get(): string};
-	}>((strore) => strore)(({active, folder, threads}) => [
+	}>((store) => ({
+		active: store.active,
+		folder: store.folder.get(),
+		threads: store.threads,
+	}))(({active, folder, threads}) => [
 		`active: ${active}`,
-		`folder: ${folder.get()}`,
+		`folder: ${folder}`,
 		`threads: ${threads.get()}`,
 	].join('\n') as any);
 
@@ -136,9 +140,10 @@ describe('connect', () => {
 		await frame();
 		expect(root.innerHTML.split('\n')[1]).toEqual('folder: revert');
 
-		folder.set('fail');
-		defaultFolder.set('revert-silent', true);
 		store.dispatch({type: 'FOLDER/SET', payload: defaultFolder});
+		await frame();
+		defaultFolder.set('revert-fail', true);
+		folder.set('ping');
 		await frame();
 		expect(root.innerHTML.split('\n')[1]).toEqual('folder: revert');
 	});
@@ -153,5 +158,25 @@ describe('connect', () => {
 		defaultThreads.set('123');
 		await frame();
 		expect(root.innerHTML.split('\n')[2]).toEqual('threads: 123');
+	});
+});
+
+describe('connect: mapDispatchToProps', () => {
+	const root = document.createElement('div');
+	const Fragment = connect<null, {action: () => string}>(null, () => ({action: () => 'OK'}))(({action}) => [
+		`action: ${action()}`,
+	].join('\n') as any);
+
+	ReactDOM.render(
+		<Provider store={store}>
+			<Fragment/>
+		</Provider>,
+		root,
+	);
+
+	it('initial', () => {
+		expect(root.innerHTML.split('\n')).toEqual([
+			'action: OK',
+		]);
 	});
 });
