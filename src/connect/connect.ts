@@ -100,7 +100,7 @@ function computed(render, stateless?: boolean) {
 	};
 }
 
-export const connect = <Connect>function connect(...args) {
+export const connect: Connect = (function connect(...args) {
 	const [
 		mapStateToProps,
 		mapDispatchToProps,
@@ -113,7 +113,7 @@ export const connect = <Connect>function connect(...args) {
 			Target = computed(Target, true);
 		}
 
-		const HOC = reactReduxConnect(...args)(Target);
+		const HOC = (reactReduxConnect as Function)(...args)(Target);
 		const proto = HOC.prototype;
 		const {
 			getChildContext,
@@ -189,4 +189,4 @@ export const connect = <Connect>function connect(...args) {
 
 		return HOC;
 	};
-};
+}) as any;

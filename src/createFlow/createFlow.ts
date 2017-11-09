@@ -1,4 +1,4 @@
-import {Middleware, MiddlewareAPI} from 'redux';
+import {Middleware, MiddlewareAPI, Reducer} from 'redux';
 
 export interface Action {
 	type: string;
@@ -12,7 +12,7 @@ export interface FlowProps {
 	error?: Error;
 }
 
-export type FlowEffect<StateProps extends FlowProps, S> = (action: Action, store: Store<S>) => Promise<Partial<StateProps>>;
+export type FlowEffect<StateProps extends FlowProps, S> = (action: Action, api: MiddlewareAPI<S>) => Promise<Partial<StateProps>>;
 
 export type FlowScheme<StateProps extends FlowProps, S> = {
 	name: string;
@@ -51,8 +51,8 @@ export function createFlow<StateProps extends FlowProps, State>(scheme: FlowSche
 		name,
 		ACTIONS,
 
-		middleware: ((store: MiddlewareAPI<State>) => {
-			const {dispatch} = store;
+		middleware: ((api: MiddlewareAPI<State>) => {
+			const {dispatch} = api;
 			let cid = 0;
 			let isFunction = typeof effects === 'function';
 			let activeEffects: {[name: string]: number} = {};
@@ -81,9 +81,9 @@ export function createFlow<StateProps extends FlowProps, State>(scheme: FlowSche
 				}
 
 				if (isFunction) {
-					promise = (effects as FlowEffect<StateProps, State>)(action, store);
+					promise = (effects as FlowEffect<StateProps, State>)(action, api);
 				} else if (effects.hasOwnProperty(type)) {
-					promise = effects[type](action, store);
+					promise = effects[type](action, api);
 				}
 
 				if (promise != null) {
@@ -97,7 +97,7 @@ export function createFlow<StateProps extends FlowProps, State>(scheme: FlowSche
 			};
 		}) as Middleware,
 
-		reducer: (state: StateProps = INITIAL_STATE, action: Action) => {
+		reducer: ((state: StateProps = INITIAL_STATE, action: Action) => {
 			const {type, payload} = action;
 
 			switch (type) {
@@ -131,6 +131,6 @@ export function createFlow<StateProps extends FlowProps, State>(scheme: FlowSche
 			}
 
 			return reducer ? reducer(state, action) : state;
-		},
+		}) as Reducer<StateProps>,
 	};
 }

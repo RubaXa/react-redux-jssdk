@@ -6,7 +6,7 @@ interface SearchStateProps extends FlowProps {
 	count: number;
 }
 
-interface Store {
+interface TestStore {
 	search: SearchStateProps;
 }
 
@@ -30,7 +30,7 @@ it('createFlow / object', async () => {
 		...extra,
 	});
 
-	const flow = createFlow<SearchStateProps, Store>({
+	const flow = createFlow<SearchStateProps, TestStore>({
 		name: '~SEARCH',
 		defaults: {count: 0},
 		effects: {
@@ -45,8 +45,8 @@ it('createFlow / object', async () => {
 		reducer: (state) => state,
 	});
 
-	const store = createStore<Store>(
-		combineReducers({search: flow.reducer}),
+	const store = createStore<TestStore>(
+		combineReducers<TestStore>({search: flow.reducer}),
 		applyMiddleware(flow.middleware),
 	);
 
@@ -75,7 +75,7 @@ it('createFlow / function', async () => {
 	const SOMETHING_HAS_CHANGED_SUCCESS = 'SOMETHING_HAS_CHANGED_SUCCESS';
 	const SOMETHING_HAS_CHANGED_FAILED = 'SOMETHING_HAS_CHANGED_FAILED';
 
-	const flow = createFlow<SearchStateProps, Store>({
+	const flow = createFlow<SearchStateProps, TestStore>({
 		name: '~SEARCH',
 		defaults: {count: 0},
 		effects: ({type}) => {
@@ -88,8 +88,8 @@ it('createFlow / function', async () => {
 		reducer: (state) => state,
 	});
 
-	const store = createStore<Store>(
-		combineReducers({search: flow.reducer}),
+	const store = createStore<TestStore>(
+		combineReducers<TestStore>({search: flow.reducer}),
 		applyMiddleware(flow.middleware),
 	);
 

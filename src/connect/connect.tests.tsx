@@ -51,7 +51,13 @@ defaultThreads.forEach = () => {};
 
 setObservableClass(Emitter);
 
-const store = createStore(combineReducers({
+type TestState = {
+	active: string;
+	folder: string;
+	threads: {get(): string};
+};
+
+const store = createStore<TestState>(combineReducers<TestState>({
 	active: (state = 0, {type, payload}) => type == 'ACTIVE' ? payload : state,
 	folder: (folder = defaultFolder, {type, payload}) => {
 		switch (type) {
@@ -78,11 +84,7 @@ describe('connect: mapStateToProps', () => {
 	});
 
 	const root = document.createElement('div');
-	const Fragment = connect<{
-		active: string;
-		folder: string;
-		threads: {get(): string};
-	}>((store) => ({
+	const Fragment = connect<TestState>((store) => ({
 		active: store.active,
 		folder: store.folder.get(),
 		threads: store.threads,
@@ -163,7 +165,7 @@ describe('connect: mapStateToProps', () => {
 
 describe('connect: mapDispatchToProps', () => {
 	const root = document.createElement('div');
-	const Fragment = connect<null, {action: () => string}>(null, () => ({action: () => 'OK'}))(({action}) => [
+	const Fragment = connect<TestState, {action: () => string}>(null, () => ({action: () => 'OK'}))(({action}) => [
 		`action: ${action()}`,
 	].join('\n') as any);
 
