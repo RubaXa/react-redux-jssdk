@@ -102,7 +102,7 @@ function computed(render, stateless?: boolean) {
 
 function cloneClass(Target) {
 	const CloneTarget = function (props, context) { Target.call(this, props, context); };
-	CloneTarget.prototype = Target.prototype;
+	CloneTarget.prototype = Object.create(Target.prototype);
 	CloneTarget.prototype.constructor = CloneTarget;
 	return CloneTarget;
 }
