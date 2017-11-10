@@ -100,6 +100,13 @@ function computed(render, stateless?: boolean) {
 	};
 }
 
+function cloneClass(Target) {
+	const CloneTarget = function (props, context) { Target.call(this, props, context); };
+	CloneTarget.prototype = Target.prototype;
+	CloneTarget.prototype.constructor = CloneTarget;
+	return CloneTarget;
+}
+
 export const connect: Connect = (function connect(...args) {
 	const [
 		mapStateToProps,
@@ -108,6 +115,7 @@ export const connect: Connect = (function connect(...args) {
 
 	return function (Target) {
 		if (Target && Target.prototype && Target.prototype.render) {
+			Target = cloneClass(Target);
 			Target.prototype.render = computed(Target.prototype.render);
 		} else {
 			Target = computed(Target, true);

@@ -165,9 +165,12 @@ describe('connect: mapStateToProps', () => {
 
 describe('connect: mapDispatchToProps', () => {
 	const root = document.createElement('div');
-	const Fragment = connect<TestState, {action: () => string}>(null, () => ({action: () => 'OK'}))(({action}) => [
-		`action: ${action()}`,
-	].join('\n') as any);
+	const Box = class extends React.Component<any, any> {
+		render() {
+			return `action: ${this.props.action()}`
+		}
+	};
+	const Fragment = connect<TestState, {action: () => string}>(null, () => ({action: () => 'OK'}))(Box);
 
 	ReactDOM.render(
 		<Provider store={store}>
